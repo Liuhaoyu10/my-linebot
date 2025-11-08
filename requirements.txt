@@ -1,5 +1,5 @@
 fastapi
-uvicorn[standard]
-selenium
-webdriver-manager
+uvicorn
 line-bot-sdk
+beautifulsoup4
+requests
