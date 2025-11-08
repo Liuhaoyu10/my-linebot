@@ -1,4 +1,4 @@
-# main.py
+# -*- coding: utf-8 -*-
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
 from linebot import LineBotApi, WebhookHandler
@@ -9,19 +9,29 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 import os, time
 
+# ======================================================
+# 🔑 從 Render 環境變數讀取金鑰（記得在 Render 介面設定）
+# ======================================================
+LINE_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
+LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET")
+
+# ======================================================
+# 🧠 初始化 FastAPI + LINE Bot
+# ======================================================
 app = FastAPI()
-
-# 讀取環境變數
-LINE_TOKEN = os.getenv("RJP/s0ug++vF1y4jo7NuS19YptR4KGbNL9T/faxG7UcBS1nCV5r/bHEFk+/CkPQqErg/LDt/GAM8uXpSXCYbIgf2WToIyuVB3pS7cZ1gt5CuhfgllrVMFY1yqiTAPxsCiQCRzKkWWjAlq07A466SZQdB04t89/1O/w1cDnyilFU=")
-LINE_SECRET = os.getenv("8fc2ab41aaffc5096178aac0a241108d")
-
 line_bot_api = LineBotApi(LINE_TOKEN)
 handler = WebhookHandler(LINE_SECRET)
 
+# ======================================================
+# 🏠 首頁測試
+# ======================================================
 @app.get("/")
 async def root():
     return {"message": "✅ Line Bot + TCG 查價後端運作中！"}
 
+# ======================================================
+# 💬 Webhook 接收事件
+# ======================================================
 @app.post("/callback")
 async def callback(request: Request):
     body = await request.body()
@@ -32,8 +42,10 @@ async def callback(request: Request):
         return PlainTextResponse("Invalid signature", status_code=400)
     return PlainTextResponse("OK")
 
-# 🃏 查價功能（Render 雲端 Chrome）
-def search_price(card_name):
+# ======================================================
+# 🃏 查價功能（Selenium）
+# ======================================================
+def search_price(card_name: str):
     base_url = "https://www.tcgstore.com.tw/search"
     url = f"{base_url}?sortType=Price&sortDirection=Desc&keyword={card_name}"
 
@@ -42,6 +54,7 @@ def search_price(card_name):
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
 
+    # Render 上安裝的 chromedriver 通常在 /usr/bin/chromedriver
     driver = webdriver.Chrome(service=Service("/usr/bin/chromedriver"), options=options)
     driver.get(url)
     time.sleep(5)
@@ -52,7 +65,7 @@ def search_price(card_name):
         return f"❌ 找不到與「{card_name}」相關的商品。"
 
     results = []
-    for item in items[:5]:
+    for item in items[:5]:  # 只取前 5 筆結果
         try:
             title = item.find_element(By.CSS_SELECTOR, "h5").text.strip()
         except:
@@ -63,19 +76,27 @@ def search_price(card_name):
             price = "無價格"
         results.append(f"{title} → {price}")
     driver.quit()
+
     return "\n".join(results)
 
+# ======================================================
+# 🤖 處理使用者訊息事件
+# ======================================================
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     msg = event.message.text.strip()
+    print(f"🗨️ 收到使用者訊息: {msg}")
 
-    if msg.startswith("查價"):
-        keyword = msg.replace("查價", "").strip()
-        if not keyword:
-            reply_text = "請輸入卡片名稱，例如：查價 皮卡丘"
-        else:
-            reply_text = search_price(keyword)
-    else:
-        reply_text = "請輸入「查價 卡名」查詢卡片價格，例如：查價 黑魔導"
+    # Selenium 查價
+    reply_text = search_price(msg)
+    print(f"✅ 回覆內容：\n{reply_text}")
 
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+
+# ======================================================
+# 🚀 啟動伺服器
+# ======================================================
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))  # ✅ 必須使用 Render 的動態 PORT
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
