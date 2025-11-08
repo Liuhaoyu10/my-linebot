@@ -12,8 +12,8 @@ app = FastAPI()
 # ======================================================
 # 🔑 環境變數（在 Render 上設定）
 # ======================================================
-LINE_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
-LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET")
+LINE_TOKEN = os.getenv("RJP/s0ug++vF1y4jo7NuS19YptR4KGbNL9T/faxG7UcBS1nCV5r/bHEFk+/CkPQqErg/LDt/GAM8uXpSXCYbIgf2WToIyuVB3pS7cZ1gt5CuhfgllrVMFY1yqiTAPxsCiQCRzKkWWjAlq07A466SZQdB04t89/1O/w1cDnyilFU=")
+LINE_SECRET = os.getenv("8fc2ab41aaffc5096178aac0a241108d")
 
 line_bot_api = LineBotApi(LINE_TOKEN)
 handler = WebhookHandler(LINE_SECRET)
